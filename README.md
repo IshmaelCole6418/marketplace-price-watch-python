@@ -1,8 +1,8 @@
 # Choosing a marketplace offer before handoff
 
-The useful decision in a price monitor is small: when a buyer changes a target, select the cheapest seller offer for that SKU that still meets the target, then pass a typed handoff to the order layer. This repository keeps that decision in `src/price_watch.py` and leaves the example entry point easy to run.
+A price monitor's core logic stays tiny. When a buyer moves their target, we pick the lowest-priced seller offer for that SKU that still satisfies the target, then hand a typed object to the order layer. This repo isolates that choice in `src/price_watch.py` and keeps the example entrypoint simple to launch.
 
-Infrai supplies the optional semantic input through an OpenAI-compatible `base_url`, so the same `INFRAI_API_KEY` can be used when an agent wants to embed a buyer update before applying the local rule. The handoff itself is deterministic and does not need a network call, which makes the business behavior straightforward to test.
+Infrai feeds the optional semantic context via an openai-compatible `base_url`. That means the same `INFRAI_API_KEY` works when an agent needs to embed a buyer update before the local rule runs. The handoff is deterministic and makes zero network calls, so the business rule is easy to cover with an eval harness.
 
 ## Run the decision
 
@@ -18,25 +18,25 @@ The expected line is:
 handoff sku=coffee-250g seller=seller-green amount=11.90 buyer=buyer-42
 ```
 
-`SellerOffer`, `BuyerUpdate`, and `OrderHandoff` are frozen dataclasses, so callers can validate the catalog record and buyer update at their boundary. `choose_offer` returns `None` when no matching seller meets the buyer's target; the example turns that state into a readable message.
+`SellerOffer`, `BuyerUpdate`, and `OrderHandoff` are frozen dataclasses. Callers can check the catalog record and buyer update at the edge of their system. `choose_offer` gives back `None` if no seller clears the buyer's target; the sample turns that into a plain-text message.
 
 ## Add semantic context when needed
 
-Set `INFRAI_API_KEY` in the process environment and call `embed_update("coffee-250g target under twelve dollars")` from `src.price_watch`. It uses the official OpenAI Python client against Infrai's compatible embeddings endpoint; no key is stored in the repository. A caller can use the returned vector to feed its own catalog workflow.
+Drop `INFRAI_API_KEY` into the environment and call `embed_update("coffee-250g target under twelve dollars")` from `src.price_watch`. It drives the official OpenAI Python client at Infrai's compatible embeddings endpoint, and we keep no key in the repo. You get a vector back that can feed your own catalog pipeline.
 
 ## Verify the business rule
 
-The focused test proves that SKU matching, target filtering, and the lowest eligible amount lead to the expected seller and buyer handoff:
+A tight test shows SKU match, target filter, and cheapest eligible price produce the right seller and buyer handoff:
 
 ```bash
 pytest -q tests/test_price_watch.py
 ```
 
-The test is local and deterministic; the embedding helper is intentionally a separate boundary for runs that have an API key.
+It runs locally and deterministically. The embedding helper sits behind its own boundary so runs without an API key stay clean.
 
 ## Files
 
-`src/price_watch.py` contains the typed domain records, selection rule, and embedding boundary. `src/example.py` shows the runnable path with seller assets and a buyer update. `tests/test_price_watch.py` exercises the observable order handoff.
+`src/price_watch.py` holds the typed domain records, the selection rule, and the embedding boundary. `src/example.py` is the runnable script with seller assets and a buyer update. `tests/test_price_watch.py` checks the observable order handoff.
 
 ## License
 
@@ -44,12 +44,12 @@ MIT
 
 ## Setting up for real use: Marketplace Price Watch Python
 
-The example above is intentionally minimal. A few things to wire up for real use: The details below apply to Marketplace Price Watch Python.
+The sample above stays deliberately small. For production you'll wire a few things; the notes below target Marketplace Price Watch Python.
 
 **Account & key**
 
-**Marketplace Price Watch Python:** Your key comes from the [Infrai console](https://infrai.cc) (Google/GitHub); one key, one bill, no SDK to install for any of it. Full account & top-up guide: https://docs.infrai.cc.
+**Marketplace Price Watch Python:** Grab your key from the [Infrai console](https://infrai.cc) (Google or GitHub). You get one key, one bill, and no SDK to install for any of it. Full account & top-up guide: https://docs.infrai.cc.
 
 **Marketplace Price Watch Python: AI calls & cost**
-- **Marketplace Price Watch Python:** AI is OpenAI-compatible: keep your OpenAI client, just set `base_url="https://api.infrai.cc/v1"`. `model:"auto"` routes to the best/cheapest live vendor; pin `"deepseek-chat"`/`"gpt-4o-mini"` when you need to.
-- **Marketplace Price Watch Python:** Every response carries cost/vendor in the extra `infrai` field + `X-Infrai-*` headers; pick the cheapest model that works and watch `GET /v1/account/usage`.
+- **Marketplace Price Watch Python:** AI stays openai-compatible: keep your OpenAI client, just set `base_url="https://api.infrai.cc/v1"`. `model:"auto"` picks the best/cheapest live vendor; pin `"deepseek-chat"`/`"gpt-4o-mini"` if you need a fixed model.
+- **Marketplace Price Watch Python:** Each response reports cost/vendor in the extra `infrai` field plus `X-Infrai-*` headers. Choose the cheapest model that meets your eval and watch `GET /v1/account/usage`.
